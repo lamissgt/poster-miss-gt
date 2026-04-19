@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>La Miss GT - Generador de Pósters</title>
+
+<style>
+body{
+  font-family: Arial;
+  text-align: center;
+  background: #fff0f5;
+}
+h1{ color:#d63384; }
+
+button{
+  background:#ff69b4;
+  color:white;
+  border:none;
+  padding:10px;
+  margin:5px;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+#resultado{
+  display:grid;
+  gap:10px;
+  justify-content:center;
+}
+
+canvas{
+  width:180px;
+  border:1px solid #ccc;
+}
+</style>
+</head>
+
+<body>
+
+<h1>La Miss GT</h1>
+<p>Convierte tu imagen en un póster único</p>
+
+<input type="file" id="upload" accept="image/*"><br><br>
+
+<select id="paginas">
+  <option value="2">2 páginas</option>
+  <option value="4">4 páginas</option>
+  <option value="6">6 páginas</option>
+  <option value="9">9 páginas</option>
+  <option value="12">12 páginas</option>
+  <option value="16">16 páginas</option>
+  <option value="20">20 páginas</option>
+</select>
+
+<br><br>
+
+<button onclick="dividir()">Generar póster</button>
+<button onclick="descargarPDF()">Descargar PDF</button>
+
+<div id="resultado"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+let img = new Image();
+let imagenCargada = false;
+
+// Cargar imagen correctamente
+document.getElementById("upload").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  img.onload = () => {
+    imagenCargada = true;
+    alert("Imagen lista ✔");
+  };
+
+  img.src = URL.createObjectURL(file);
+});
+
+function dividir(){
+
+  if(!imagenCargada){
+    alert("Primero sube la imagen");
+    return;
+  }
+
+  const contenedor = document.getElementById("resultado");
+  contenedor.innerHTML = "";
+
+  const total = parseInt(document.getElementById("paginas").value);
+
+  let columnas = Math.ceil(Math.sqrt(total));
+  let filas = Math.ceil(total / columnas);
+
+  contenedor.style.gridTemplateColumns = `repeat(${columnas}, 180px)`;
+
+  const ancho = img.width / columnas;
+  const alto = img.height / filas;
+
+  for(let y = 0; y < filas; y++){
+    for(let x = 0; x < columnas; x++){
+
+      let canvas = document.createElement("canvas");
+
+      // CALIDAD MEDIA (más rápido)
+      canvas.width = 1240;
+      canvas.height = 1754;
+
+      let ctx = canvas.getContext("2d");
+
+      ctx.imageSmoothingEnabled = true;
+
+      ctx.drawImage(
+        img,
+        x * ancho,
+        y * alto,
+        ancho,
+        alto,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      // TEXTO
+      ctx.font = "italic bold 60px cursive";
+      ctx.fillStyle = "#ff69b4";
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 3;
+
+      let texto = "La Miss GT";
+      let textWidth = ctx.measureText(texto).width;
+
+      let posX = canvas.width - textWidth - 20;
+      let posY = canvas.height - 20;
+
+      ctx.strokeText(texto, posX, posY);
+      ctx.fillText(texto, posX, posY);
+
+      contenedor.appendChild(canvas);
+    }
+  }
+}
+
+// PDF rápido
+async function descargarPDF(){
+
+  const { jsPDF } = window.jspdf;
+  let canvases = document.querySelectorAll("canvas");
+
+  if(canvases.length === 0){
+    alert("Genera el póster primero");
+    return;
+  }
+
+  let pdf = new jsPDF();
+
+  for(let i = 0; i < canvases.length; i++){
+
+    let imgData = canvases[i].toDataURL("image/jpeg", 0.8);
+
+    if(i > 0) pdf.addPage();
+
+    pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
+  }
+
+  pdf.save("poster-miss-gt.pdf");
+}
+</script>
+
+</body>
+</html>
